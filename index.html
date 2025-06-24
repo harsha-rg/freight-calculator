@@ -1,0 +1,150 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Freight Calculator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+  <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
+    <h1 class="text-2xl font-bold mb-6 text-center">Freight Calculator</h1>
+    <div class="space-y-4">
+      <div>
+        <label for="height" class="block text-sm font-medium text-gray-700">Height (mm)</label>
+        <input type="number" id="height" step="any" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="Enter height">
+      </div>
+      <div>
+        <label for="width" class="block text-sm font-medium text-gray-700">Width (mm)</label>
+        <input type="number" id="width" step="any" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="Enter width">
+      </div>
+      <div>
+        <label for="length" class="block text-sm font-medium text-gray-700">Length (mm)</label>
+        <input type="number" id="length" step="any" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="Enter length">
+      </div>
+      <div>
+        <label for="cbm" class="block text-sm font-medium text-gray-700">CBM (cubic meters)</label>
+        <input type="number" id="cbm" step="any" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="Enter CBM">
+      </div>
+      <div>
+        <label for="weight" class="block text-sm font-medium text-gray-700">Weight (grams)</label>
+        <input type="number" id="weight" step="any" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="Enter weight">
+      </div>
+      <button onclick="calculateFreight()" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700">Calculate</button>
+    </div>
+    <div id="result" class="mt-6 text-center text-lg font-semibold"></div>
+  </div>
+
+  <script>
+    function calculateFreight() {
+      const height = parseFloat(document.getElementById('height').value) || 0;
+      const width = parseFloat(document.getElementById('width').value) || 0;
+      const length = parseFloat(document.getElementById('length').value) || 0;
+      const cbm = parseFloat(document.getElementById('cbm').value) || 0;
+      const weight = parseFloat(document.getElementById('weight').value) || 0;
+      const resultDiv = document.getElementById('result');
+
+      // If all inputs are 0, return empty result
+      if (height === 0 && width === 0 && length === 0 && cbm === 0 && weight === 0) {
+        resultDiv.textContent = '';
+        return;
+      } else if (height === 0 && width === 0 && length === 0 && cbm === 0 && weight !== 0) {
+        resultDiv.textContent = '';
+        return;
+      }
+
+      // Prioritized logic for non-zero/non-empty/non-all-0 CBM
+      if (typeof cbm === 'number' && !isNaN(cbm) &&
+          typeof weight === 'number' && !isNaN(weight) &&
+          typeof length === 'number' && !isNaN(length)) {
+        let result = "Aramex/NZ Post (CBM, Weight, Length - Cross Pollination)";
+        // ARAMEX conditions
+        if (((cbm >= 0.001 && cbm <= 0.060) || (cbm >= 0.125 && cbm <= 0.200)) && length <= 2.400 && weight <= 25) {
+          result = "ARAMEX";
+        }
+        // NZ Post conditions
+        else if (cbm > 0.060 && cbm <= 0.125 && length <= 1.500 && weight <= 25) {
+          result = "NZ Post";
+        }
+        else if (cbm > 0.200 || length > 2.4 || weight > 25) {
+          result = "Big Freight";
+        }
+        resultDiv.textContent = `Result: ${result}`;
+        return;
+      }
+
+      // If only CBM is 0 (and not all dimensions are 0), proceed with Weight and Length checks
+      if (Math.abs(cbm) < 1e-10 && !(height === 0 && width === 0 && Math.abs(length) < 1e-10 && weight === 0)) {
+        if (typeof weight !== 'number' || isNaN(weight) || typeof length !== 'number' || isNaN(length)) {
+          resultDiv.textContent = 'Result: Custom Check Needed';
+          return;
+        }
+
+        let result = "Custom Check Needed";
+        // ARAMEX conditions (based on Weight and Length only)
+        if (weight <= 25 && weight > 0 && length <= 2.400) {
+          result = "ARAMEX";
+        }
+        // NZ Post conditions (based on Weight and Length only)
+        else if (weight <= 25 && weight > 0 && length >= 0.001 && length <= 1.500) {
+          result = "NZ Post";
+        }
+        // Big Freight conditions (explicit override)
+        else if (length > 2.400 || weight > 25) {
+          result = "Big Freight";
+        }
+        else if (weight !== 0 && Math.abs(length) < 1e-10) {
+          result = "";
+        }
+        resultDiv.textContent = `Result: ${result}`;
+        return;
+      }
+
+      // If CBM is empty, undefined, or null, leave result blank
+      if (cbm === "" || cbm === undefined || cbm === null) {
+        resultDiv.textContent = '';
+        return;
+      }
+    }
+  </script>
+</body>
+</html>
