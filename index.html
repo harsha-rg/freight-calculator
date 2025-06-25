@@ -104,7 +104,7 @@
           typeof length === 'number' && !isNaN(length)) {
         let result = "Aramex/NZ Post (CBM, Weight, Length - Cross Pollination)";
         // ARAMEX conditions
-        if (((cbm >= 0.126 && cbm <= 0.200)) && length <= 2.400 && weight <= 30) {
+        if (cbm >= 0.126 && cbm <= 0.200 && length <= 2.400 && weight <= 30) {
           result = "ARAMEX";
         }
         // NZ Post conditions
