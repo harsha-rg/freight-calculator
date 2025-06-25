@@ -104,15 +104,15 @@
           typeof length === 'number' && !isNaN(length)) {
         let result = "Aramex/NZ Post (CBM, Weight, Length - Cross Pollination)";
         // ARAMEX conditions
-        if (((cbm >= 0.001 && cbm <= 0.060) || (cbm >= 0.125 && cbm <= 0.200)) && length <= 2.400 && weight <= 25) {
+        if (((cbm >= 0.126 && cbm <= 0.200)) && length <= 2.400 && weight <= 30) {
           result = "ARAMEX";
         }
         // NZ Post conditions
-        else if (cbm > 0.060 && cbm <= 0.125 && length <= 1.500 && weight <= 25) {
+        else if (cbm > 0.001 && cbm <= 0.125 && length <= 1.500 && weight <= 25) {
           result = "NZ Post";
         }
         // Big Freight conditions
-        else if (cbm > 0.200 || length > 2.4 || weight > 25) {
+        else if (cbm > 0.200 || length > 2.4 || weight > 30) {
           result = "Big Freight";
         }
         resultDiv.textContent = `Result: ${result}`;
@@ -130,7 +130,7 @@
 
         let result = "Custom Check Needed";
         // ARAMEX conditions (based on Weight and Length only)
-        if (weight <= 25 && weight > 0 && length <= 2.400) {
+        if (weight <= 30 && weight > 0 && length <= 2.400) {
           result = "ARAMEX";
         }
         // NZ Post conditions (based on Weight and Length only)
@@ -138,7 +138,7 @@
           result = "NZ Post";
         }
         // Big Freight conditions (explicit override)
-        else if (length > 2.400 || weight > 25) {
+        else if (length > 2.400 || weight > 30) {
           result = "Big Freight";
         }
         else if (weight !== 0 && Math.abs(length) < 1e-10) {
